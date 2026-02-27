@@ -25,9 +25,9 @@
     background:linear-gradient(135deg,var(--bg1),var(--bg2));
     text-align:center;
     overflow-x:hidden;
-    overflow-y:auto; /* ✅ scroll ON */
+    overflow-y:auto;
   }
-  body.modal-open{ overflow:hidden; } /* ✅ lock scroll only when popup open */
+  body.modal-open{ overflow:hidden; }
 
   h1{
     margin:16px 0 8px;
@@ -63,10 +63,12 @@
   .mode-btn:hover, .ctrl-btn:hover{ transform:translateY(-1px) scale(1.02); filter:brightness(1.03); }
   .mode-btn.active{ outline:3px solid rgba(255,255,255,.7); }
 
-  .hemat{ background:#2ecc71; }
   .royal{ background:#3498db; }
   .tajir{ background:#e84393; }
-  .premini{ background:#f39c12; } /* ✅ Premium Mini */
+  .premini{ background:#f39c12; }
+  .guards{ background:#8e44ad; }
+  .infi{ background:#2d3436; }
+
   .ctrl-btn{ background:var(--btn); }
   .ctrl-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; filter:none; }
 
@@ -77,8 +79,9 @@
   }
 
   .grid{
+    --cols: 5;
     display:grid;
-    grid-template-columns:repeat(5,110px);
+    grid-template-columns:repeat(var(--cols),110px);
     gap:14px;
     justify-content:center;
     padding:14px 12px 26px;
@@ -158,7 +161,6 @@
   }
   .box.picked .tag{ display:block; }
 
-  /* ✅ Shuffle gimmick (no spoiler) */
   .shuffling .box{
     animation: shuffleShake .42s ease-in-out infinite;
     filter: blur(.2px) brightness(1.02);
@@ -200,14 +202,12 @@
     50%{ opacity:.9; transform:translateY(-4px); }
   }
 
-  /* ✅ Extra shuffle flash highlight (no spoiler) */
   .flash{
     outline:4px solid rgba(255,255,255,.9);
     box-shadow: 0 12px 26px rgba(0,0,0,.22), 0 0 0 6px rgba(255,255,255,.18);
     transform: translateY(-3px) scale(1.03);
   }
 
-  /* ✅ Dramatic focus before popup */
   .grid.dim-other .box:not(.picked){
     filter: blur(2px) brightness(.72);
     transform: scale(.98);
@@ -218,7 +218,6 @@
     box-shadow: 0 14px 30px rgba(0,0,0,.28), 0 0 0 8px rgba(255,215,0,.22), 0 0 28px rgba(255,215,0,.55);
   }
 
-  /* POPUP */
   .popup{
     position:fixed;
     inset:0;
@@ -272,7 +271,6 @@
     color:var(--text);
   }
 
-  /* ✅ Secret mode */
   .popup-content.secret-mode{
     animation: secretPulse 1.1s ease-in-out infinite alternate;
   }
@@ -293,7 +291,6 @@
   }
   .popup-content.secret-mode .secretBadge{ display:inline-block; }
 
-  /* ADMIN */
   .adminWrap{
     width:min(980px, 96vw);
     margin:14px auto 28px;
@@ -421,7 +418,6 @@
     opacity:.85;
     line-height:1.4;
   }
-
 </style>
 </head>
 <body>
@@ -432,13 +428,14 @@
 <!-- OVERLAY UI -->
 <div id="overlayUI">
   <h1>🎁 FUN SURPRISE BOX 🎁</h1>
-  <div class="note" id="modeNote">Mode: HEMAT (1R)</div>
+  <div class="note" id="modeNote">Mode: ROYAL (5R)</div>
 
   <div class="topbar">
-    <button class="mode-btn hemat active" data-mode="hemat">HEMAT</button>
-    <button class="mode-btn royal" data-mode="royal">ROYAL</button>
+    <button class="mode-btn royal active" data-mode="royal">ROYAL</button>
     <button class="mode-btn tajir" data-mode="tajir">TAJIR</button>
     <button class="mode-btn premini" data-mode="premini">PREMINI</button>
+    <button class="mode-btn guards" data-mode="guards">GUARDS</button>
+    <button class="mode-btn infi" data-mode="infi">INFI</button>
 
     <button class="ctrl-btn" id="resetBtn">Reset</button>
     <button class="ctrl-btn" id="shuffleBtn">Shuffle</button>
@@ -478,15 +475,16 @@
     </div>
 
     <div class="tabs">
-      <div class="tab active" data-mode="hemat">HEMAT</div>
-      <div class="tab" data-mode="royal">ROYAL</div>
+      <div class="tab active" data-mode="royal">ROYAL</div>
       <div class="tab" data-mode="tajir">TAJIR</div>
       <div class="tab" data-mode="premini">PREMINI</div>
+      <div class="tab" data-mode="guards">GUARDS</div>
+      <div class="tab" data-mode="infi">INFI</div>
     </div>
 
     <div class="help">
-      • Set <b>Jumlah (rarity)</b> = berapa kotak yang berisi hadiah ini. Total tiap mode harus = <b>15</b>.<br>
-      • Upload gambar (PNG/JPG/WebP). Disarankan ukuran kecil (misal 256×256, &lt; 200KB) biar lancar di Live Studio.<br>
+      • Set <b>Jumlah (rarity)</b> = berapa kotak yang berisi hadiah ini.<br>
+      • Total: ROYAL/TAJIR/PREMINI = <b>15</b>, GUARDS = <b>6</b>, INFI = <b>4</b>.<br>
       • Klik <b>Save</b>, lalu buka overlay normal (tanpa <b>?admin=1</b>).
     </div>
 
@@ -495,16 +493,7 @@
 </div>
 
 <script>
-  // ==========================
-  // 1) DEFAULT
-  // ==========================
   const DEFAULT_CONFIG = {
-    hemat: [
-      { name:"Coin 50", count:5, img:null },
-      { name:"Candy", count:5, img:null },
-      { name:"Sticker", count:4, img:null },
-      { name:"Bonus", count:1, img:null }
-    ],
     royal: [
       { name:"Coin 300", count:6, img:null },
       { name:"Gem 10", count:5, img:null },
@@ -517,16 +506,28 @@
       { name:"Mega Box", count:2, img:null },
       { name:"SECRET", count:1, img:null }
     ],
-    premini: [ /* ✅ Premium Mini (after Tajir) */
+    premini: [
       { name:"Coin 150", count:6, img:null },
       { name:"Gem 5", count:5, img:null },
       { name:"Mini Pack", count:3, img:null },
       { name:"Lucky Mini", count:1, img:null }
+    ],
+    guards: [
+      { name:"Guard Box", count:3, img:null },
+      { name:"Guard Token", count:2, img:null },
+      { name:"GUARD SECRET", count:1, img:null }
+    ],
+    infi: [
+      { name:"Infi Box", count:2, img:null },
+      { name:"Infi Token", count:1, img:null },
+      { name:"INFI SECRET", count:1, img:null }
     ]
   };
 
-  const PRICE = { hemat:"1R", royal:"5R", tajir:"10R", premini:"20R" }; // ✅ premini 20R
-  const STORAGE_KEY = "fun_box_config_v5_hype";
+  const PRICE = { royal:"5R", tajir:"10R", premini:"20R", guards:"-", infi:"-" };
+  const STORAGE_KEY = "fun_box_config_v8_nohemat";
+
+  const MODE_TOTAL = { royal:15, tajir:15, premini:15, guards:6, infi:4 };
 
   function loadConfig(){
     try{
@@ -543,9 +544,6 @@
 
   let CONFIG = loadConfig();
 
-  // ==========================
-  // 2) OVERLAY LOGIC
-  // ==========================
   const grid = document.getElementById("grid");
   const popup = document.getElementById("popup");
   const popupContent = document.getElementById("popupContent");
@@ -561,7 +559,7 @@
   const resetBtn = document.getElementById("resetBtn");
   const shuffleBtn = document.getElementById("shuffleBtn");
 
-  let mode = "hemat";
+  let mode = "royal";
   let slots = [];
   let pickedIndex = null;
   let isRevealing = false;
@@ -569,12 +567,8 @@
 
   const STAGGER_MS = 80;
   const POPUP_DELAY_MS = 260;
-
-  // shuffle timings
   const SHUFFLE_ANIM_MS = 1200;
   const FLASH_MS = 90;
-
-  // dramatic timings
   const FOCUS_DELAY_MS = 650;
   const FOCUS_AFTER_REVEAL_MS = 240;
 
@@ -586,6 +580,17 @@
     return arr;
   }
 
+  function getColsForCount(n){
+    if(n === 6) return 3; // 3 atas 3 bawah
+    if(n === 4) return 2; // 2 atas 2 bawah
+    return 5;
+  }
+
+  function applyGridCols(){
+    const cols = getColsForCount(slots.length || (MODE_TOTAL[mode] ?? 15));
+    grid.style.setProperty("--cols", String(cols));
+  }
+
   function buildSlotsFromConfig(modeKey){
     const items = CONFIG[modeKey] || [];
     const expanded = [];
@@ -595,8 +600,10 @@
         expanded.push({ name: it.name || "Hadiah", img: it.img || null });
       }
     }
-    while(expanded.length < 15) expanded.push({ name:"?", img:null });
-    while(expanded.length > 15) expanded.pop();
+
+    const target = MODE_TOTAL[modeKey] ?? 15;
+    while(expanded.length < target) expanded.push({ name:"?", img:null });
+    while(expanded.length > target) expanded.pop();
     return fisherYatesShuffle(expanded);
   }
 
@@ -614,6 +621,7 @@
 
     grid.classList.remove("dim-other");
     slots = buildSlotsFromConfig(mode);
+    applyGridCols();
     render(false);
   }
 
@@ -630,7 +638,6 @@
 
     isShuffling = true;
     enableControls(false);
-
     render(false);
 
     const overlay = document.createElement("div");
@@ -642,7 +649,7 @@
     let flashTimer = setInterval(() => {
       const boxes = grid.querySelectorAll(".box");
       boxes.forEach(b => b.classList.remove("flash"));
-      const rand = Math.floor(Math.random()*15);
+      const rand = Math.floor(Math.random()*slots.length);
       if(boxes[rand]) boxes[rand].classList.add("flash");
     }, FLASH_MS);
 
@@ -650,7 +657,6 @@
       clearInterval(flashTimer);
       grid.querySelectorAll(".box").forEach(b => b.classList.remove("flash"));
 
-      // true shuffle
       slots = fisherYatesShuffle(slots);
 
       grid.classList.remove("shuffling");
@@ -695,7 +701,7 @@
 
     render(true);
 
-    const totalRevealTime = (15 * STAGGER_MS) + 520;
+    const totalRevealTime = (slots.length * STAGGER_MS) + 520;
 
     setTimeout(() => {
       const boxes = grid.querySelectorAll(".box");
@@ -712,7 +718,7 @@
 
   function render(reveal){
     grid.innerHTML = "";
-    for(let i=0;i<15;i++){
+    for(let i=0;i<slots.length;i++){
       const div = document.createElement("div");
       div.className = "box";
       if(isRevealing || isShuffling) div.classList.add("disabled");
@@ -766,7 +772,7 @@
   }
 
   // ==========================
-  // 3) ADMIN UI
+  // ADMIN UI
   // ==========================
   const isAdmin = new URLSearchParams(location.search).get("admin") === "1";
   const overlayUI = document.getElementById("overlayUI");
@@ -780,7 +786,7 @@
   const importBtn = document.getElementById("importBtn");
   const resetDefaultBtn = document.getElementById("resetDefaultBtn");
 
-  let adminMode = "hemat";
+  let adminMode = "royal";
 
   function fileToDataUrl(file){
     return new Promise((resolve, reject) => {
@@ -814,7 +820,7 @@
       const nameWrap = document.createElement("div");
       const nameInput = document.createElement("input");
       nameInput.className = "in";
-      nameInput.placeholder = "Nama hadiah (contoh: Coin 50)";
+      nameInput.placeholder = "Nama hadiah";
       nameInput.value = it.name || "";
       const mini = document.createElement("div");
       mini.className = "mini";
@@ -835,7 +841,7 @@
       countInput.className = "count";
       countInput.type = "number";
       countInput.min = "0";
-      countInput.max = "15";
+      countInput.max = String(MODE_TOTAL[adminMode] ?? 15);
       countInput.step = "1";
       countInput.value = String(it.count ?? 0);
 
@@ -848,8 +854,9 @@
 
       const countHint = document.createElement("div");
       countHint.className = "countHint";
-      const pct0 = Math.round(((parseInt(countInput.value||"0",10)) / 15) * 100);
-      countHint.textContent = `${countInput.value}/15 ≈ ${pct0}%`;
+      const totalMode = MODE_TOTAL[adminMode] ?? 15;
+      const pct0 = Math.round(((parseInt(countInput.value||"0",10)) / totalMode) * 100);
+      countHint.textContent = `${countInput.value}/${totalMode} ≈ ${pct0}%`;
 
       countWrap.appendChild(countLabel);
       countWrap.appendChild(countInput);
@@ -867,8 +874,9 @@
 
       countInput.addEventListener("input", () => {
         CONFIG[adminMode][idx].count = parseInt(countInput.value || "0", 10);
-        const pct = Math.round(((parseInt(countInput.value||"0",10)) / 15) * 100);
-        countHint.textContent = `${countInput.value}/15 ≈ ${pct}%`;
+        const totalMode2 = MODE_TOTAL[adminMode] ?? 15;
+        const pct = Math.round(((parseInt(countInput.value||"0",10)) / totalMode2) * 100);
+        countHint.textContent = `${countInput.value}/${totalMode2} ≈ ${pct}%`;
       });
 
       file.addEventListener("change", async () => {
@@ -890,19 +898,22 @@
       rowsEl.appendChild(row);
     });
 
-    const total = (CONFIG[adminMode] || []).reduce((s,it)=>s + (parseInt(it.count||0,10)||0), 0);
+    const totalNeed = MODE_TOTAL[adminMode] ?? 15;
+    const totalNow = (CONFIG[adminMode] || []).reduce((s,it)=>s + (parseInt(it.count||0,10)||0), 0);
+
     const info = document.createElement("div");
     info.className = "help";
-    info.innerHTML = `Total kotak untuk mode <b>${adminMode.toUpperCase()}</b>: <b>${total}</b> (harus <b>15</b>).`;
+    info.innerHTML = `Total kotak untuk mode <b>${adminMode.toUpperCase()}</b>: <b>${totalNow}</b> (harus <b>${totalNeed}</b>).`;
     rowsEl.appendChild(info);
   }
 
   function validateAll(){
-    const modes = ["hemat","royal","tajir","premini"];
+    const modes = Object.keys(MODE_TOTAL);
     const errs = [];
     for(const m of modes){
+      const need = MODE_TOTAL[m];
       const total = (CONFIG[m]||[]).reduce((s,it)=>s + (parseInt(it.count||0,10)||0), 0);
-      if(total !== 15) errs.push(`${m.toUpperCase()} total ${total} (harus 15)`);
+      if(total !== need) errs.push(`${m.toUpperCase()} total ${total} (harus ${need})`);
     }
     return errs;
   }
@@ -955,9 +966,6 @@
 
   tabEls.forEach(t => t.addEventListener("click", () => adminSetMode(t.dataset.mode)));
 
-  // ==========================
-  // 4) BOOT
-  // ==========================
   if(isAdmin){
     overlayUI.style.display = "none";
     adminUI.style.display = "block";
